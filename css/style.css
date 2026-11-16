@@ -1,0 +1,42 @@
+body { font-family: sans-serif; margin: 16px; background: #fff; color: #222; }
+button { margin: 2px; cursor: pointer; }
+button:disabled { cursor: default; }
+.cards { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.card { border: 1px solid #aaa; padding: 8px; width: 220px; font-size: 13px; cursor: pointer; }
+.card.on { border: 2px solid #2a6; background: #efe; }
+.wrap { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+#side { flex: 1; min-width: 300px; font-size: 13px; }
+
+#board { display: grid; gap: 1px; background: #999; border: 1px solid #999; width: max-content; }
+.cell { width: 52px; height: 52px; background: #fff; font-size: 11px; position: relative; overflow: hidden; cursor: pointer; }
+.head { background: #eee; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: default; }
+.cell.deploy { background: #e6f0ff; }
+.cell.obstacle { background: #555; }
+.cell.mob { background: #c9a; }
+.cell.reach { background: #bde; }
+.cell.target { background: #9e9; }
+.cell.danger { box-shadow: inset 0 0 0 3px #e33; }
+.cell.danger:not(.mob) { background-color: #fdd; }
+.cell.danger.reach { background: #cbe; }
+.cell.danger.target { background: #bd9; }
+.cell .tok { display: block; font-weight: bold; padding: 2px; }
+.cell .tok.sel { color: #06c; text-decoration: underline; }
+.cell .tok.down { color: #999; }
+.cell .ghost { position: absolute; bottom: 2px; left: 2px; color: #06c; }
+.cell .coord { position: absolute; right: 2px; bottom: 1px; color: #bbb; font-size: 9px; }
+
+.legend { font-size: 12px; }
+.lg { display: inline-block; width: 12px; height: 12px; margin: 0 2px 0 8px; vertical-align: middle; border: 1px solid #999; }
+.lg.danger { background: #fdd; border-color: #e33; }
+.lg.reach { background: #bde; } .lg.target { background: #9e9; }
+.lg.deploy { background: #e6f0ff; } .lg.obstacle { background: #555; }
+
+.box { border: 1px solid #ccc; padding: 6px 8px; margin-bottom: 8px; }
+.unit { border: 1px solid #ccc; padding: 4px 6px; margin-bottom: 4px; cursor: pointer; }
+.unit.sel { border: 2px solid #06c; }
+.unit.out { opacity: .5; }
+.bar { display: inline-block; width: 80px; height: 8px; background: #eee; vertical-align: middle; }
+.bar i { display: block; height: 100%; }
+.warn { color: #c00; }
+.muted { color: #888; }
+#log { max-height: 220px; overflow-y: auto; font-size: 12px; border: 1px solid #ccc; padding: 6px; white-space: pre-wrap; }

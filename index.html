@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anima Raid</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <h1>ANIMA — 마스 레이드</h1>
+
+  <!-- 1. 편성 화면 -->
+  <section id="setup">
+    <h2>아라한 선택</h2>
+    <div id="mobList" class="cards"></div>
+    <h2>이나니스 선택 (1~4명)</h2>
+    <div id="userList" class="cards"></div>
+    <button id="btnStart" disabled>출격 준비</button>
+  </section>
+
+  <!-- 2. 배치/전투 화면 -->
+  <section id="battle" hidden>
+    <div id="topbar"></div>
+    <div class="wrap">
+      <div>
+        <div id="board"></div>
+        <p class="legend">
+          <span class="lg danger"></span>공격 예고
+          <span class="lg reach"></span>이동 가능
+          <span class="lg target"></span>대상 가능
+          <span class="lg deploy"></span>출격 구역
+          <span class="lg obstacle"></span>장애물
+        </p>
+      </div>
+      <div id="side"></div>
+    </div>
+    <h3>전투 기록</h3>
+    <div id="log"></div>
+  </section>
+
+  <!-- 3. 결과 화면 -->
+  <section id="result" hidden></section>
+
+  <script src="character/skill.js"></script>
+  <script src="character/users.js"></script>
+  <script src="character/mob.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
