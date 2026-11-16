@@ -11,13 +11,6 @@
   const CAT_KO = { attack: '공격', defense: '방어', control: '제어', support: '지원' };
   const PRIORITY = { defense: 1, control: 2, support: 3, attack: 4 }; // 같은 턴 행동 처리 순서
   const EFFECT_KO = { damage: '피해', heal: '회복', ego: 'EGO', calm: '아니마 -', shield: '보호막' };
-  const ARHAT_DEBUFFS = [
-    '아니마 잔향 — 한동안 꿈속에서 아라한의 목소리를 듣는다.',
-    '싱크 공포증 — 다음 출격 시 싱크 개시가 1턴 늦어진다.',
-    '기억 결손 — 전투 직전의 기억 일부를 잃었다.',
-    '자아 균열 — 거울 속의 자신이 낯설게 느껴진다.',
-    '감각 과부하 — 쉘의 감각이 육체에 남아 잠들지 못한다.',
-  ];
 
   // ───────── 유틸 ─────────
   const K = (x, y) => x + ',' + y;
@@ -41,17 +34,6 @@
       console.warn(`[users.js] ${u.name}: 스탯 규칙 위반 (합계 ${sum}, 각 3~15 / 합계 30 이어야 함)`);
     }
     u.skills.forEach((id) => { if (!SKILLS[id]) console.warn(`[users.js] ${u.name}: 없는 스킬 ${id}`); });
-  }
-
-  // 파생 수치 (rule.md 에 공식이 없어 임의 지정)
-  function derive(stats) {
-    const tank = stats.endurance >= 10; // 방어형은 이동력 디버프
-    return {
-      maxHp: 24 + stats.endurance * 4,
-      maxEgo: 10 + stats.sync * 2 + stats.endurance,
-      move: Math.max(1, 2 + Math.floor((stats.mobility - 3) / 4) - (tank ? 1 : 0)),
-      armor: Math.floor(stats.endurance / 4), // 받는 HP 피해 고정 감소
-    };
   }
 
   const effVal = (c, eff) => Math.round((c.stats[eff.stat] || 0) * (eff.mult || 0) + (eff.base || 0));
@@ -95,12 +77,11 @@
       </div>`).join('');
 
     $('#userList').innerHTML = Object.values(USERS).map((u) => {
-      const d = derive(u.stats);
       return `
       <div class="card ${pickUsers.has(u.id) ? 'on' : ''}" data-user="${u.id}">
         <b>${esc(u.name)}</b> <span class="muted">(${esc(u.shell)})</span> — ${getPosition(u.stats)}<br>
         ${Object.keys(STAT_KO).map((k) => `${STAT_KO[k]} ${u.stats[k]}`).join(' / ')}<br>
-        HP ${d.maxHp} · EGO ${d.maxEgo} · 이동 ${d.move} · 방어 ${d.armor} · 사거리 ${u.basicRange || 1}<br>
+        HP ${u.hp} · EGO ${u.ego} · 이동 ${u.move} · 사거리 ${u.basicRange || 1}<br>
         스킬: ${u.skills.map((id) => esc(SKILLS[id] ? SKILLS[id].name : id)).join(', ')}
       </div>`;
     }).join('');
@@ -123,13 +104,13 @@
 
   // ───────── 전투 초기화 ─────────
   function makeChar(u) {
-    const d = derive(u.stats);
+    const d = { maxHp: u.hp, maxEgo: u.ego, move: u.move };
     const c = {
       id: u.id, def: u, name: u.name, stats: u.stats, d,
       position: getPosition(u.stats),
       hp: d.maxHp, ego: d.maxEgo, anima: 0,
       x: -1, y: -1, placed: false, downed: false, retired: false,
-      cds: {}, plan: { move: null, action: null }, debuff: null,
+      cds: {}, plan: { move: null, action: null },
     };
     resetSt(c);
     return c;
@@ -312,7 +293,6 @@
 
   function arhat(c) {
     c.retired = true;
-    c.debuff = pick(ARHAT_DEBUFFS);
     log(`  ★ ${c.name} 아라한화! 이나니스가 붕괴하여 리타이어합니다. (${L(c.x, c.y)})`, 'bad');
   }
 
@@ -330,7 +310,6 @@
     c.st.dmgRed.forEach((r) => { dm *= 1 - r; });
     c.st.disRed.forEach((r) => { ds *= 1 - r; });
     dm = Math.ceil(dm); ds = Math.ceil(ds); // 감소 후 올림
-    if (dm > 0) dm = Math.max(1, dm - c.d.armor);
     const parts = [];
     if (c.st.shield && dm > 0) {
       const ab = Math.min(c.st.shield, dm);
@@ -626,7 +605,6 @@
         <div class="box"><b>${esc(c.name)}</b> (${c.position}) —
           ${c.retired ? '<span class="warn">아라한화 (리타이어)</span>' : c.downed ? '기절' : '생존'}
           · HP ${c.hp}/${c.d.maxHp} · EGO ${c.ego}/${c.d.maxEgo} · 아니마 ${c.anima}
-          ${c.debuff ? `<br><span class="warn">서사적 디버프: ${esc(c.debuff)}</span>` : ''}
         </div>`).join('')}
       <button id="btnAgain">편성으로 돌아가기</button>
       <h3>전투 기록</h3>
@@ -756,7 +734,7 @@
         <button data-cmd="autoDeploy">자동 배치</button>
         <button data-cmd="begin" ${S.chars.every((c) => c.placed) ? '' : 'disabled'}>전투 시작</button></div>`;
     } else if (S.phase === 'plan' && sel) {
-      h += `<div class="box"><b>${esc(sel.name)}</b> — 이동 ${sel.d.move}마스 · 방어 ${sel.d.armor} · 기본공격 사거리 ${sel.def.basicRange || 1}<br>`;
+      h += `<div class="box"><b>${esc(sel.name)}</b> — 이동 ${sel.d.move}마스 · 기본공격 사거리 ${sel.def.basicRange || 1}<br>`;
       if (sel.retired) h += '<span class="warn">아라한화로 조작 불가</span>';
       else if (sel.downed) h += '<span class="warn">기절 — 이동/행동 불가 (회복되면 다음 턴부터 행동)</span>';
       else {
