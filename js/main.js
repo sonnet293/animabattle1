@@ -36,6 +36,9 @@
     u.skills.forEach((id) => { if (!SKILLS[id]) console.warn(`[users.js] ${u.name}: 없는 스킬 ${id}`); });
   }
 
+  // 데이터 객체의 키와 id가 달라도 id로 찾을 수 있도록
+  const findById = (obj, id) => obj[id] || Object.values(obj).find((v) => v.id === id);
+
   const effVal = (c, eff) => Math.round((c.stats[eff.stat] || 0) * (eff.mult || 0) + (eff.base || 0));
 
   // ───────── 상태 ─────────
@@ -117,7 +120,7 @@
   }
 
   function startBattle() {
-    const m = MOBS[pickMob];
+    const m = findById(MOBS, pickMob);
     const ar = m.arena;
     const start = parseL(m.start);
     S = {
@@ -131,7 +134,7 @@
         def: m, name: m.name, hp: m.hp, maxHp: m.hp, size: m.size, x: start.x, y: start.y,
         patterns: m.patterns, pIdx: 0, phaseIdx: -1, weaken: 1, vuln: null, lastPattern: null,
       },
-      chars: [...pickUsers].map((id) => makeChar(USERS[id])),
+      chars: [...pickUsers].map((id) => makeChar(findById(USERS, id))),
       telegraph: null, sel: null, mode: null, pending: null,
     };
     ar.deployRows.forEach((row) => {
