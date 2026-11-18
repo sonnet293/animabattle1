@@ -196,7 +196,7 @@
     const a = c.plan.action;
     if (!a || !a.target) return true;
     const t = validTargets(c, a);
-    if (a.target.kind === 'mob') return t.size > 0;
+    if (a.target.kind === 'mob') return true; // 몹 대상은 유지, 사거리 밖이면 계획에 경고 표시
     if (a.target.kind === 'cell') return t.has(K(a.target.x, a.target.y));
     return [...t.values()].some((v) => v.id === a.target.id);
   }
@@ -655,6 +655,22 @@
     if (S.phase === 'deploy') A.deploy.forEach((k) => { const [x, y] = k.split(',').map(Number); if (!charAt(x, y)) reach.add(k); });
     const danger = S.phase === 'plan' ? new Set(attackCells(false)) : new Set();
 
+    // 계획된 행동 표시: 대상 칸(몹/아군/지정 칸) 또는 자기 칸(방어·대기·자기 스킬)
+    const actMarks = new Map();
+    if (S.phase === 'plan') active().forEach((c) => {
+      const a = c.plan.action;
+      if (!a || c.downed) return;
+      const name = { attack: '공격', defend: '방어', wait: '대기' }[a.type] || SKILLS[a.skillId].name;
+      let pos = plannedPos(c);
+      const t = a.target;
+      if (t && t.kind === 'mob') pos = { x: S.mob.x, y: S.mob.y };
+      else if (t && t.kind === 'char') { const tc = getChar(t.id); if (tc) pos = plannedPos(tc); }
+      else if (t && t.kind === 'cell') pos = t;
+      const key = K(pos.x, pos.y);
+      if (!actMarks.has(key)) actMarks.set(key, []);
+      actMarks.get(key).push(`${c.name}:${name}`);
+    });
+
     let h = '<div class="cell head"></div>';
     for (let x = 0; x < A.w; x++) h += `<div class="cell head">${String.fromCharCode(65 + x)}</div>`;
     for (let y = 0; y < A.h; y++) {
@@ -675,6 +691,8 @@
         if (c) inner += `<span class="tok ${c.id === S.sel ? 'sel' : ''} ${c.downed ? 'down' : ''}">${esc(c.name)}${c.downed ? '(기절)' : ''}</span>`;
         const ghost = active().filter((a) => a.plan.move && a.plan.move.x === x && a.plan.move.y === y);
         if (ghost.length) inner += `<span class="ghost">→${ghost.map((g) => esc(g.name)).join(',')}</span>`;
+        const acts = actMarks.get(k);
+        if (acts) inner += `<span class="act" title="${esc(acts.join(', '))}">${acts.map(esc).join('<br>')}</span>`;
         inner += `<span class="coord">${L(x, y)}</span>`;
         h += `<div class="${cls.join(' ')}" data-x="${x}" data-y="${y}">${inner}</div>`;
       }
@@ -693,9 +711,14 @@
       if (a.target) {
         if (a.target.kind === 'char') t += ` → ${getChar(a.target.id).name}`;
         if (a.target.kind === 'cell') t += ` → ${L(a.target.x, a.target.y)}`;
-        if (a.target.kind === 'mob') t += ` → ${S.mob.name}`;
+        if (a.target.kind === 'mob') {
+          t += ` → ${S.mob.name}`;
+          if (!validTargets(c, a).size) t += ' <span class="warn">(사거리 밖)</span>';
+        }
       }
       parts.push(t);
+    } else if (S.mode === 'target' && S.sel === c.id && S.pending) {
+      parts.push(`<span class="muted">${esc(SKILLS[S.pending.skillId].name)}: 대상 선택 중</span>`);
     }
     return parts.join(' / ') || '<span class="muted">미정</span>';
   }
@@ -855,8 +878,15 @@
         sel.plan.action = pend; S.mode = null;
       } else {
         const t = validTargets(sel, pend);
-        S.mode = 'target'; S.pending = pend; S.preview = null;
-        S.msg = t.size ? '' : '(이동 후 위치 기준) 사거리 안에 대상이 없습니다. 노란 칸이 사거리입니다 — 빈 칸을 클릭하면 취소됩니다.';
+        if (pend.type === 'attack' || SKILLS[pend.skillId].target === 'enemy') {
+          // 적은 몹 하나뿐 → 즉시 등록 (사거리 판정은 실행 시점)
+          sel.plan.action = { ...pend, target: { kind: 'mob' } };
+          S.mode = null; S.pending = null; S.preview = pend; // 사거리 표시 유지
+          S.msg = t.size ? '' : '(이동 후 위치 기준) 현재 사거리 밖입니다 — 노란 칸이 사거리. 이대로면 행동이 실패합니다.';
+        } else {
+          S.mode = 'target'; S.pending = pend; S.preview = null;
+          S.msg = t.size ? '' : '(이동 후 위치 기준) 사거리 안에 대상이 없습니다. 노란 칸이 사거리입니다 — 빈 칸을 클릭하면 취소됩니다.';
+        }
       }
     }
     render();
