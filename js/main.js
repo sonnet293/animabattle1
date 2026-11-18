@@ -639,10 +639,18 @@
 
   function renderBoard() {
     const A = S.arena, sel = getChar(S.sel);
-    let reach = new Set(), targets = new Map();
+    let reach = new Set(), targets = new Map(), range = new Set();
     if (S.phase === 'plan' && sel && !sel.downed && !sel.retired) {
-      if (S.mode === 'target') targets = validTargets(sel, S.pending);
-      else reach = reachable(sel);
+      const pend = S.mode === 'target' ? S.pending : S.preview;
+      if (pend) {
+        targets = validTargets(sel, pend);
+        const o = plannedPos(sel);
+        const r = pend.type === 'attack' ? (sel.def.basicRange || 1) : SKILLS[pend.skillId].range;
+        for (let y = 0; y < A.h; y++) for (let x = 0; x < A.w; x++) {
+          const dd = dist(o, { x, y });
+          if (dd > 0 && dd <= r && !isObs(x, y) && !isMob(x, y)) range.add(K(x, y));
+        }
+      } else reach = reachable(sel);
     }
     if (S.phase === 'deploy') A.deploy.forEach((k) => { const [x, y] = k.split(',').map(Number); if (!charAt(x, y)) reach.add(k); });
     const danger = S.phase === 'plan' ? new Set(attackCells(false)) : new Set();
@@ -659,6 +667,7 @@
         if (isMob(x, y)) cls.push('mob');
         if (danger.has(k)) cls.push('danger');
         if (reach.has(k)) cls.push('reach');
+        if (range.has(k)) cls.push('range');
         if (targets.has(k)) cls.push('target');
         let inner = '';
         if (x === S.mob.x && y === S.mob.y) inner += `<span class="tok">${esc(S.mob.name.split(' ').pop())}</span>`;
@@ -739,7 +748,7 @@
       else if (sel.downed) h += '<span class="warn">기절 — 이동/행동 불가 (회복되면 다음 턴부터 행동)</span>';
       else {
         h += `계획: ${planText(sel)}<br>
-          <span class="muted">${S.mode === 'target' ? '초록 칸을 클릭해 대상을 지정하세요.' : '하늘색 칸을 클릭해 이동 위치를 지정 (자기 칸 = 제자리).'}</span><br>`;
+          <span class="muted">${S.mode === 'target' ? '노란 칸 = 사거리, 초록 칸을 클릭해 대상을 지정하세요.' : '하늘색 칸을 클릭해 이동 위치를 지정 (자기 칸 = 제자리).'}</span><br>`;
         const cur = sel.plan.action;
         const btn = (cmd, label, title, dis, warn, on) =>
           `<button data-cmd="${cmd}" title="${esc(title)}" ${dis ? 'disabled' : ''} class="${warn ? 'warn' : ''}" style="${on ? 'font-weight:bold;outline:2px solid #06c' : ''}">${label}</button>`;
@@ -776,6 +785,7 @@
     S.sel = id;
     S.mode = null;
     S.pending = null;
+    S.preview = null;
     S.msg = '';
   }
 
@@ -845,8 +855,8 @@
         sel.plan.action = pend; S.mode = null;
       } else {
         const t = validTargets(sel, pend);
-        if (!t.size) { S.msg = '(이동 후 위치 기준) 사거리 안에 대상이 없습니다.'; S.mode = null; }
-        else { S.mode = 'target'; S.pending = pend; S.msg = ''; }
+        S.mode = 'target'; S.pending = pend; S.preview = null;
+        S.msg = t.size ? '' : '(이동 후 위치 기준) 사거리 안에 대상이 없습니다. 노란 칸이 사거리입니다 — 빈 칸을 클릭하면 취소됩니다.';
       }
     }
     render();
@@ -860,6 +870,27 @@
     if (unit) { selectChar(unit.dataset.char); return render(); }
     const b = e.target.closest('[data-cmd]');
     if (b && !b.disabled) onCmd(b.dataset.cmd);
+  });
+
+  // 공격/스킬 버튼 호버 → 이동 후 위치 기준 사거리 미리보기
+  const previewOf = (el) => {
+    const b = el && el.closest && el.closest('[data-cmd]');
+    if (!b) return null;
+    const cmd = b.dataset.cmd;
+    if (cmd === 'act:attack') return { type: 'attack' };
+    if (cmd.startsWith('skill:') && SKILLS[cmd.slice(6)]) return { type: 'skill', skillId: cmd.slice(6) };
+    return null;
+  };
+  $('#battle').addEventListener('mouseover', (e) => {
+    if (!S || S.phase !== 'plan' || S.mode === 'target') return;
+    const p = previewOf(e.target);
+    const same = (p && S.preview && p.type === S.preview.type && p.skillId === S.preview.skillId) || (!p && !S.preview);
+    if (same) return;
+    S.preview = p;
+    renderBoard();
+  });
+  $('#battle').addEventListener('mouseleave', () => {
+    if (S && S.preview) { S.preview = null; renderBoard(); }
   });
 
   // ───────── 시작 ─────────

@@ -14,10 +14,12 @@ button:disabled { cursor: default; }
 .cell.obstacle { background: #555; }
 .cell.mob { background: #c9a; }
 .cell.reach { background: #bde; }
+.cell.range { background: #fff2b3; }
 .cell.target { background: #9e9; }
 .cell.danger { box-shadow: inset 0 0 0 3px #e33; }
 .cell.danger:not(.mob) { background-color: #fdd; }
 .cell.danger.reach { background: #cbe; }
+.cell.danger.range { background: #fdc9a0; }
 .cell.danger.target { background: #bd9; }
 .cell .tok { display: block; font-weight: bold; padding: 2px; }
 .cell .tok.sel { color: #06c; text-decoration: underline; }
@@ -28,7 +30,7 @@ button:disabled { cursor: default; }
 .legend { font-size: 12px; }
 .lg { display: inline-block; width: 12px; height: 12px; margin: 0 2px 0 8px; vertical-align: middle; border: 1px solid #999; }
 .lg.danger { background: #fdd; border-color: #e33; }
-.lg.reach { background: #bde; } .lg.target { background: #9e9; }
+.lg.reach { background: #bde; } .lg.range { background: #fff2b3; } .lg.target { background: #9e9; }
 .lg.deploy { background: #e6f0ff; } .lg.obstacle { background: #555; }
 
 .box { border: 1px solid #ccc; padding: 6px 8px; margin-bottom: 8px; }
